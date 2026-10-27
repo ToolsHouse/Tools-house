@@ -1,4 +1,133 @@
-# GitHub Pages Deployment Preparation Report
+# GitHub Pages Deployment - White Screen Fix
+
+## Root Cause Identified
+
+**White screen issue caused by missing Supabase environment variables in GitHub Actions**
+
+The GitHub Actions workflow was not passing the Supabase credentials to the build process, so:
+1. The app tried to initialize Supabase with empty strings
+2. Console error: "Missing Supabase environment variables"
+3. React app failed to mount properly
+4. Result: White screen
+
+## Fix Applied
+
+**File Changed:** `.github/workflows/deploy.yml`
+
+**Changes:**
+- Added environment variables to the build step
+- Supabase credentials are passed from GitHub Secrets to the build
+- App can now initialize Supabase correctly during build
+
+## Manual Steps Required
+
+### Step 1: Add GitHub Secrets (CRITICAL)
+
+1. Go to your GitHub repository: https://github.com/mohamedadelmehana/Tools-house
+2. Navigate to **Settings** → **Secrets and variables** → **Actions**
+3. Click **New repository secret**
+4. Add the following secrets:
+
+**Secret 1:**
+- Name: `VITE_SUPABASE_URL`
+- Value: `https://gjtfwxnbktlomapudzfq.supabase.co`
+
+**Secret 2:**
+- Name: `VITE_SUPABASE_PUBLISHABLE_KEY`
+- Value: `sb_publishable_jdnEJEnmCxm7ZZrfVqrlTg_q_0j6IBP`
+
+### Step 2: Commit and Push Changes
+
+```bash
+cd C:\Users\el msria\Desktop\tools-house-react-new
+git add .
+git commit -m "Fix white screen - add Supabase env vars to GitHub Actions"
+git push origin main
+```
+
+### Step 3: Wait for GitHub Actions
+
+1. Go to **Actions** tab in your repository
+2. Wait for the "Deploy to GitHub Pages" workflow to complete
+3. The build will now have access to Supabase credentials
+
+### Step 4: Verify Deployment
+
+After workflow completes:
+1. Go to: https://mohamedadelmehana.github.io/Tools-house/
+2. Should see login page (not white screen)
+3. Open browser console (F12) to verify no errors
+
+## Files Changed
+
+1. **`.github/workflows/deploy.yml`** - Added environment variables for Supabase
+2. **`vite.config.js`** - Base path already correct (`/Tools-house/`)
+3. **`public/404.html`** - SPA redirect page (from previous fix)
+
+## Build Result
+
+✅ **Build Successful** (local build with correct credentials)
+- 1938 modules transformed
+- No errors
+
+## Deployment Status
+
+⚠️ **Requires manual step** - GitHub Secrets must be added before pushing
+
+## Root Cause
+
+**Missing environment variables in GitHub Actions build**
+
+The build was failing because:
+- GitHub Actions workflow didn't have access to Supabase credentials
+- App tried to initialize with empty strings
+- React failed to mount
+- White screen on deployed site
+
+## Security
+
+✅ **No secrets exposed:**
+- Credentials stored in GitHub Secrets (not in code)
+- Build has access to secrets at build time only
+- Secrets not committed to repository
+- Frontend only uses publishable key (safe)
+
+## Why This Works
+
+GitHub Secrets allow you to:
+- Store sensitive data securely
+- Pass them to GitHub Actions workflows
+- Use them during build time
+- Never expose them in committed code
+
+The Vite build process will inject these environment variables into the built JavaScript bundle, allowing the deployed app to connect to Supabase.
+
+## Expected Result After Manual Steps
+
+1. GitHub Secrets added
+2. Changes pushed
+3. GitHub Actions rebuilds with credentials
+4. App initializes Supabase correctly
+5. Login page loads instead of white screen
+6. Authentication and database operations work from deployed site
+
+## Verification Checklist
+
+After deployment:
+- [ ] GitHub Secrets added to repository
+- [ ] Changes pushed to main branch
+- [ ] GitHub Actions workflow completed successfully
+- [ ] Login page loads at https://mohamedadelmehana.github.io/Tools-house/
+- [ ] Can log in with Supabase credentials
+- [ ] Database operations work from deployed site
+
+## Important Note
+
+GitHub Pages hosts static files only. The app will work because:
+- Supabase public API is accessible from any domain
+- No backend server needed
+- Environment variables are injected at build time
+- Runtime calls to Supabase work from deployed domain
 
 ## Summary
 
