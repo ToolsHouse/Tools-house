@@ -1,4 +1,4 @@
-import { Outlet, Link, useLocation } from 'react-router-dom'
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import {
   LayoutDashboard,
@@ -20,6 +20,7 @@ import { useState, useEffect, useRef } from 'react'
 const Layout = () => {
   const { signOut, user, profile } = useAuth()
   const location = useLocation()
+  const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const userMenuRef = useRef(null)
@@ -56,7 +57,7 @@ const Layout = () => {
   const handleSignOut = async () => {
     try {
       await signOut()
-      window.location.href = '/login'
+      navigate('/login')
     } catch (error) {
       console.error('Error signing out:', error)
     }

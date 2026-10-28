@@ -99,6 +99,7 @@ function App() {
             <Route path="reports/daily" element={<DailyReport />} />
             <Route path="settings" element={<Settings />} />
           </Route>
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
