@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../contexts/AuthContext'
-import { Plus, Search, Eye, MessageCircle } from 'lucide-react'
+import { Plus, Search, Eye, MessageCircle, Trash2, Loader2, AlertCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 
@@ -8,6 +8,8 @@ const Sales = () => {
   const [sales, setSales] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
+  const [deletingId, setDeletingId] = useState(null)
+  const [deleteError, setDeleteError] = useState('')
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -38,6 +40,61 @@ const Sales = () => {
       s.customers?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       s.id.includes(searchTerm)
   )
+
+  const handleDeleteSale = async (sale) => {
+    const confirmed = window.confirm(
+      `هل أنت متأكد أنك تريد حذف الفاتورة #${sale.id.slice(0, 8)}؟\nسيتم عكس الكميات في المخزون.\nلا يمكن التراجع عن هذا الإجراء.`
+    )
+    if (!confirmed) return
+
+    setDeletingId(sale.id)
+    setDeleteError('')
+
+    try {
+      // 1. Fetch sale items so we can reverse stock
+      const { data: saleItems, error: itemsError } = await supabase
+        .from('sale_items')
+        .select('product_id, quantity')
+        .eq('sale_id', sale.id)
+
+      if (itemsError) throw itemsError
+
+      // 2. Reverse stock for each item (re-add quantities that were sold)
+      for (const item of saleItems || []) {
+        const { data: product, error: fetchErr } = await supabase
+          .from('products')
+          .select('quantity')
+          .eq('id', item.product_id)
+          .single()
+
+        if (fetchErr) throw fetchErr
+
+        const newQty = (parseFloat(product.quantity) || 0) + parseFloat(item.quantity)
+        const { error: updateErr } = await supabase
+          .from('products')
+          .update({ quantity: newQty })
+          .eq('id', item.product_id)
+
+        if (updateErr) throw updateErr
+      }
+
+      // 3. Delete the sale (sale_items cascade automatically)
+      const { error: deleteErr } = await supabase
+        .from('sales')
+        .delete()
+        .eq('id', sale.id)
+
+      if (deleteErr) throw deleteErr
+
+      // 4. Remove from UI immediately
+      setSales((prev) => prev.filter((s) => s.id !== sale.id))
+    } catch (err) {
+      console.error('Error deleting sale:', err)
+      setDeleteError('حدث خطأ أثناء حذف الفاتورة: ' + (err.message || 'خطأ غير معروف'))
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   const handleWhatsApp = async (sale) => {
     const phone = formatPhoneForWhatsApp(sale.customers.phone)
@@ -128,6 +185,20 @@ const Sales = () => {
         </button>
       </div>
 
+      {/* Delete error banner */}
+      {deleteError && (
+        <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+          <AlertCircle className="h-5 w-5 flex-shrink-0" />
+          <span>{deleteError}</span>
+          <button
+            onClick={() => setDeleteError('')}
+            className="mr-auto text-red-500 hover:text-red-700 font-bold"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Search */}
       <div className="relative">
         <Search className="absolute right-3 top-3 h-5 w-5 text-gray-400" />
@@ -201,12 +272,23 @@ const Sales = () => {
                     {sale.customers?.phone && (
                       <button
                         onClick={() => handleWhatsApp(sale)}
-                        className="text-green-600 hover:text-green-900"
+                        className="text-green-600 hover:text-green-900 ml-3"
                         title="إرسال واتساب"
                       >
                         <MessageCircle className="h-4 w-4" />
                       </button>
                     )}
+                    <button
+                      onClick={() => handleDeleteSale(sale)}
+                      disabled={deletingId === sale.id}
+                      className="p-1 text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="حذف الفاتورة"
+                    >
+                      {deletingId === sale.id
+                        ? <Loader2 className="h-4 w-4 animate-spin" />
+                        : <Trash2 className="h-4 w-4" />
+                      }
+                    </button>
                   </td>
                 </tr>
               ))}
