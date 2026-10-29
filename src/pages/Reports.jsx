@@ -34,8 +34,11 @@ const Reports = () => {
       const { data: purchases } = await supabase.from('purchases').select('total')
       const totalPurchases = purchases?.reduce((sum, p) => sum + parseFloat(p.total), 0) || 0
 
-      // Fetch stock value
-      const { data: products } = await supabase.from('products').select('quantity, buy_price')
+      // Fetch stock value (only active products)
+      const { data: products } = await supabase
+        .from('products')
+        .select('quantity, buy_price')
+        .neq('is_active', false)
       const stockValue = products?.reduce((sum, p) => sum + p.quantity * parseFloat(p.buy_price), 0) || 0
 
       // Fetch profit
@@ -47,12 +50,12 @@ const Reports = () => {
         return sum + (parseFloat(item.total) - cost)
       }, 0) || 0
 
-      // Fetch counts
+      // Fetch counts (only active records)
       const [{ count: customerCount }, { count: supplierCount }, { count: productCount }] =
         await Promise.all([
-          supabase.from('customers').select('*', { count: 'exact', head: true }),
-          supabase.from('suppliers').select('*', { count: 'exact', head: true }),
-          supabase.from('products').select('*', { count: 'exact', head: true }),
+          supabase.from('customers').select('*', { count: 'exact', head: true }).neq('is_active', false),
+          supabase.from('suppliers').select('*', { count: 'exact', head: true }).neq('is_active', false),
+          supabase.from('products').select('*', { count: 'exact', head: true }).neq('is_active', false),
         ])
 
       setStats({

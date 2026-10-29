@@ -46,17 +46,18 @@ const Dashboard = () => {
       const paidTotal = salesToday?.reduce((sum, s) => sum + parseFloat(s.paid || 0), 0) || 0
       const creditTotal = salesToday?.reduce((sum, s) => sum + parseFloat(s.due || 0), 0) || 0
 
-      // Fetch counts
+      // Fetch counts (only active records)
       const [{ count: customerCount }, { count: productCount }, { count: supplierCount }] = await Promise.all([
-        supabase.from('customers').select('*', { count: 'exact', head: true }),
-        supabase.from('products').select('*', { count: 'exact', head: true }),
-        supabase.from('suppliers').select('*', { count: 'exact', head: true }),
+        supabase.from('customers').select('*', { count: 'exact', head: true }).neq('is_active', false),
+        supabase.from('products').select('*', { count: 'exact', head: true }).neq('is_active', false),
+        supabase.from('suppliers').select('*', { count: 'exact', head: true }).neq('is_active', false),
       ])
 
-      // Fetch low stock products
+      // Fetch low stock products (only active)
       const { data: lowStock } = await supabase
         .from('products')
         .select('*')
+        .neq('is_active', false)
         .lte('quantity', 'minimum_quantity')
         .order('quantity', { ascending: true })
         .limit(8)

@@ -22,15 +22,15 @@ const CreateSale = () => {
   const fetchData = async () => {
     try {
       const [productsRes, customersRes] = await Promise.all([
-        supabase.from('products').select('*').eq('is_active', true).gt('quantity', 0).order('name'),
-        supabase.from('customers').select('*').eq('is_active', true).order('name'),
+        supabase.from('products').select('*').or('is_active.is.null,is_active.eq.true').gt('quantity', 0).order('name'),
+        supabase.from('customers').select('*').or('is_active.is.null,is_active.eq.true').order('name'),
       ])
 
       if (productsRes.error) throw productsRes.error
       if (customersRes.error) throw customersRes.error
 
-      setProducts(productsRes.data || [])
-      setCustomers(customersRes.data || [])
+      setProducts((productsRes.data || []).filter((p) => p.is_active !== false))
+      setCustomers((customersRes.data || []).filter((c) => c.is_active !== false))
     } catch (error) {
       console.error('Error fetching data:', error)
     } finally {
